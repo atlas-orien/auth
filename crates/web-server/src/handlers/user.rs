@@ -1,30 +1,20 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::{Extension, Json};
+use error_code::auth;
 use service::{api::auth::AuthApi, dto::auth::AuthUser as ServiceAuthUser};
 use toolcraft_axum_kit::{
-    ApiError, CommonOk, Empty, IntoCommonResponse, ResponseResult, middleware::auth_mw::AuthUser,
+    ApiError, Empty, IntoCommonResponse, ResponseResult, middleware::auth_mw::AuthUser,
 };
 use validator::Validate;
 
 use crate::{
     dto::auth::{UpdateEmailRequest, UpdatePasswordRequest, UpdateProfileRequest, UserResponse},
-    error::{Error, from_biz_error},
+    error::{Error, bad_request, from_biz_error},
     settings::AvatarUrlConfig,
     statics::db_manager::get_default_ctx,
 };
 
-#[utoipa::path(
-    get,
-    path = "/me",
-    tag = "User",
-    security(("Bearer" = [])),
-    responses(
-        (status = 200, description = "Current user info", body = UserResponse),
-        (status = 401, description = "Unauthorized"),
-        (status = 404, description = "User not found"),
-    )
-)]
 pub async fn me(
     Extension(auth_user): Extension<AuthUser>,
     Extension(avatar_cfg): Extension<std::sync::Arc<AvatarUrlConfig>>,
@@ -40,19 +30,6 @@ pub async fn me(
         .to_json())
 }
 
-#[utoipa::path(
-    put,
-    path = "/password",
-    tag = "User",
-    security(("Bearer" = [])),
-    request_body = UpdatePasswordRequest,
-    responses(
-        (status = 200, description = "Password updated", body = CommonOk),
-        (status = 400, description = "Validation error"),
-        (status = 403, description = "Wrong old password"),
-        (status = 401, description = "Unauthorized"),
-    )
-)]
 pub async fn update_password(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<UpdatePasswordRequest>,
@@ -75,19 +52,6 @@ pub async fn update_password(
     Ok(Empty.into_common_response().to_json())
 }
 
-#[utoipa::path(
-    put,
-    path = "/email",
-    tag = "User",
-    security(("Bearer" = [])),
-    request_body = UpdateEmailRequest,
-    responses(
-        (status = 200, description = "Email updated", body = CommonOk),
-        (status = 400, description = "Validation error"),
-        (status = 409, description = "Email already in use"),
-        (status = 401, description = "Unauthorized"),
-    )
-)]
 pub async fn update_email(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<UpdateEmailRequest>,
@@ -104,18 +68,6 @@ pub async fn update_email(
     Ok(Empty.into_common_response().to_json())
 }
 
-#[utoipa::path(
-    put,
-    path = "/profile",
-    tag = "User",
-    security(("Bearer" = [])),
-    request_body = UpdateProfileRequest,
-    responses(
-        (status = 200, description = "Profile updated", body = CommonOk),
-        (status = 400, description = "Validation error"),
-        (status = 401, description = "Unauthorized"),
-    )
-)]
 pub async fn update_profile(
     Extension(auth_user): Extension<AuthUser>,
     Extension(avatar_cfg): Extension<std::sync::Arc<AvatarUrlConfig>>,
@@ -162,7 +114,8 @@ fn validate_profile_patch(
     if let Some(Some(display_name)) = &req.display_name
         && (display_name.is_empty() || display_name.chars().count() > 64)
     {
-        return Err(Error::Custom(
+        return Err(bad_request(
+            auth::DISPLAY_NAME_LENGTH_INVALID,
             "display_name length must be between 1 and 64".to_string(),
         ));
     }
@@ -191,19 +144,22 @@ fn with_avatar_version(avatar_key: &str) -> crate::error::Result<String> {
 
 fn validate_avatar_key(key: &str, cfg: &AvatarUrlConfig) -> crate::error::Result<()> {
     if key.is_empty() || key.chars().count() > 512 {
-        return Err(Error::Custom(
+        return Err(bad_request(
+            auth::AVATAR_KEY_LENGTH_INVALID,
             "avatar key length must be between 1 and 512".to_string(),
         ));
     }
 
     if key.starts_with('/') {
-        return Err(Error::Custom(
+        return Err(bad_request(
+            auth::AVATAR_KEY_FORMAT_INVALID,
             "avatar must be object key only (must not start with '/')".to_string(),
         ));
     }
 
     if key.contains("://") || key.contains(':') {
-        return Err(Error::Custom(
+        return Err(bad_request(
+            auth::AVATAR_KEY_URL_NOT_ALLOWED,
             "avatar must be object key only (URL is not allowed)".to_string(),
         ));
     }
@@ -216,12 +172,16 @@ fn validate_avatar_key(key: &str, cfg: &AvatarUrlConfig) -> crate::error::Result
         || key.contains('|')
         || key.contains('\\')
     {
-        return Err(Error::Custom("avatar key format is invalid".to_string()));
+        return Err(bad_request(
+            auth::AVATAR_KEY_FORMAT_INVALID,
+            "avatar key format is invalid",
+        ));
     }
 
     let endpoint = cfg.s3_endpoint.trim_end_matches('/');
     if key.starts_with(endpoint) {
-        return Err(Error::Custom(
+        return Err(bad_request(
+            auth::AVATAR_KEY_URL_NOT_ALLOWED,
             "avatar must be object key only (endpoint prefix is not allowed)".to_string(),
         ));
     }
@@ -300,17 +260,6 @@ pub(crate) fn build_user_response(
     }
 }
 
-#[utoipa::path(
-    post,
-    path = "/email/verify",
-    tag = "User",
-    security(("Bearer" = [])),
-    responses(
-        (status = 200, description = "Email verified", body = CommonOk),
-        (status = 401, description = "Unauthorized"),
-        (status = 404, description = "User not found"),
-    )
-)]
 pub async fn verify_email(Extension(auth_user): Extension<AuthUser>) -> ResponseResult<Empty> {
     let api = AuthApi::new(get_default_ctx());
     api.verify_email(&auth_user.user_id)

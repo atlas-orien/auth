@@ -43,10 +43,6 @@ make migrate-up
 cargo run -p auth-server
 ```
 
-Swagger UI: <http://localhost:19878/swagger-ui>
-
----
-
 ## API Endpoints
 
 ### Session (`/auth/session`)
@@ -73,7 +69,7 @@ Swagger UI: <http://localhost:19878/swagger-ui>
 
 ```text
 ┌──────────────────────────────────────────────────────┐
-│                    web-server                        │  HTTP API (Axum + utoipa)
+│                    web-server                        │  HTTP API (Axum)
 ├──────────────────────────────────────────────────────┤
 │                     service                          │  Business Logic
 ├──────────────────────────────────────────────────────┤
@@ -128,7 +124,6 @@ url = "postgres://postgres:123456@localhost:15432/auth"
 | Runtime       | Tokio               |
 | ORM           | SeaORM              |
 | Web Framework | Axum 0.8            |
-| OpenAPI       | utoipa + Swagger UI |
 | JWT           | toolcraft-jwt       |
 | Core Lib      | db-core-rs          |
 

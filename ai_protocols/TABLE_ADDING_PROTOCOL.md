@@ -68,7 +68,7 @@
 | 新增表 | migration, repo | 按协议流程执行，先 migration 再生成 entity |
 | 新增单表操作 | repo | 仅操作单表，吐出 DTO |
 | 新增/修改业务 API | service | 编排多个 Repo，处理业务逻辑 |
-| 新增/修改 HTTP 接口 | web-server | 路由、Handler、DTO、OpenAPI 注解 |
+| 新增/修改 HTTP 接口 | web-server | 路由、Handler、DTO、参数校验 |
 
 ### 禁止 AI 执行的任务
 
@@ -98,7 +98,7 @@
 在 `crates/service/src/api/<domain_name>.rs` 创建业务接口，通过注入相关的 `repo` 的 Service 实例，调用单表接口完成复杂业务聚合和外键验证。不直接触碰 SQL。详见 `SERVICE_GUIDE.md`。
 
 ### Step 5: Web HTTP 暴露（Layer 5）
-在 `crates/web-server/src/handlers/<domain_name>.rs` 编写 handler，组装请求参数并调用 `service` 层的方法。用 `utoipa` 标注完整文档。详见 `WEB_SERVER_GUIDE.md`。
+在 `crates/web-server/src/handlers/<domain_name>.rs` 编写 handler，组装请求参数并调用 `service` 层的方法。详见 `WEB_SERVER_GUIDE.md`。
 
 ---
 
@@ -108,5 +108,5 @@
 - [ ] `entity` 确保是通过脚本生成的，没有手改？
 - [ ] `repo` 是不是业务层唯一引入了 `sea-orm` 的地方？
 - [ ] `service` 是否没有任何直接的数据库驱动调用，纯靠拿 `repo` 的 DTO 拼装？
-- [ ] `web-server` 的接口是否加上了 `utoipa` 的 OpenAPI 注解并且通过 `validator` 做好了入参拦截？
+- [ ] `web-server` 的接口是否通过 `validator` 做好了入参拦截？
 - [ ] `web-server` 里的 Error 是否成功将业务 `Result` 转成了合适的 HTTP 状态码？

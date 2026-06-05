@@ -7,6 +7,7 @@ version.workspace = true
 # internal dependencies
 db-core.workspace = true
 service.workspace = true
+error-code.workspace = true
 
 # external dependencies
 tracing.workspace = true
@@ -19,9 +20,6 @@ validator.workspace = true
 thiserror.workspace = true
 time.workspace = true
 axum = {version = "0.8.8", features = ["macros", "multipart"]}
-utoipa = { version = "5", features = ["axum_extras"] }
-utoipa-swagger-ui = { version = "9", features = ["axum"] }
-utoipa-axum = { version = "0.2" }
 toolcraft-config= {version = "0.2.0"}
 toolcraft-axum-kit = {version = "0.2.9"}
 toolcraft-jwt= {version = "0.3.4"}

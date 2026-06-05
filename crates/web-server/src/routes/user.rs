@@ -4,22 +4,8 @@ use axum::{
 };
 use toolcraft_axum_kit::middleware::auth_mw;
 use toolcraft_jwt::Jwt;
-use utoipa::OpenApi;
 
 use crate::handlers::user::{me, update_email, update_password, update_profile, verify_email};
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(
-        crate::handlers::user::me,
-        crate::handlers::user::update_password,
-        crate::handlers::user::update_email,
-        crate::handlers::user::update_profile,
-        crate::handlers::user::verify_email,
-    ),
-    tags((name = "User", description = "User management APIs")),
-)]
-pub struct UserApiDoc;
 
 pub fn user_routes() -> Router {
     Router::new()

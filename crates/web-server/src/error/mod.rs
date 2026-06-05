@@ -1,7 +1,9 @@
 use axum::http::StatusCode;
 use db_core::error::{BIZ_INTERNAL_ERROR, BizError};
+use error_code::auth;
 use thiserror::Error;
 use toolcraft_axum_kit::{ApiError, CommonError};
+use validator::{ValidationErrors, ValidationErrorsKind};
 
 #[derive(Error, Debug)]
 #[allow(dead_code)]
@@ -17,6 +19,9 @@ pub enum Error {
     #[error(transparent)]
     Jwt(#[from] toolcraft_jwt::error::Error), // catch-all for other errors
 
+    #[error("bad request: {message}")]
+    BadRequest { code: i16, message: String },
+
     #[error("custom error: {0}")]
     Custom(String),
 }
@@ -25,14 +30,48 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 impl From<Error> for ApiError {
     fn from(err: Error) -> Self {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            CommonError {
-                code: BIZ_INTERNAL_ERROR,
-                message: err.to_string(),
+        match err {
+            Error::Validation(errors) => {
+                if let Some(code) = validation_error_code(&errors) {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        CommonError {
+                            code,
+                            message: format_validation_errors(&errors),
+                        }
+                        .to_json(),
+                    )
+                } else {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        CommonError {
+                            code: BIZ_INTERNAL_ERROR,
+                            message: "validation error code is not mapped".to_string(),
+                        }
+                        .to_json(),
+                    )
+                }
             }
-            .to_json(),
-        )
+            Error::BadRequest { code, message } => (
+                StatusCode::BAD_REQUEST,
+                CommonError { code, message }.to_json(),
+            ),
+            err => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                CommonError {
+                    code: BIZ_INTERNAL_ERROR,
+                    message: err.to_string(),
+                }
+                .to_json(),
+            ),
+        }
+    }
+}
+
+pub fn bad_request(code: i16, message: impl Into<String>) -> Error {
+    Error::BadRequest {
+        code,
+        message: message.into(),
     }
 }
 
@@ -45,4 +84,99 @@ pub fn from_biz_error(err: BizError) -> ApiError {
         }
         .to_json(),
     )
+}
+
+fn validation_error_code(errors: &ValidationErrors) -> Option<i16> {
+    let mut codes = Vec::new();
+    collect_validation_codes(errors, &mut codes);
+    codes.into_iter().min()
+}
+
+fn collect_validation_codes(errors: &ValidationErrors, codes: &mut Vec<i16>) {
+    let mut fields = errors.errors().iter().collect::<Vec<_>>();
+    fields.sort_by(|(left, _), (right, _)| left.cmp(right));
+
+    for (_, kind) in fields {
+        match kind {
+            ValidationErrorsKind::Field(field_errors) => {
+                for error in field_errors {
+                    if let Some(code) = validation_rule_code(error.code.as_ref()) {
+                        codes.push(code);
+                    }
+                }
+            }
+            ValidationErrorsKind::Struct(nested) => {
+                collect_validation_codes(nested, codes);
+            }
+            ValidationErrorsKind::List(items) => {
+                for nested in items.values() {
+                    collect_validation_codes(nested, codes);
+                }
+            }
+        }
+    }
+}
+
+fn validation_rule_code(rule: &str) -> Option<i16> {
+    match rule {
+        "username_length_invalid" => Some(auth::USERNAME_LENGTH_INVALID),
+        "username_format_invalid" => Some(auth::USERNAME_FORMAT_INVALID),
+        "display_name_length_invalid" => Some(auth::DISPLAY_NAME_LENGTH_INVALID),
+        "avatar_url_invalid" => Some(auth::AVATAR_URL_INVALID),
+        "password_length_invalid" => Some(auth::PASSWORD_LENGTH_INVALID),
+        "email_invalid" => Some(auth::EMAIL_INVALID),
+        "identifier_length_invalid" => Some(auth::IDENTIFIER_LENGTH_INVALID),
+        "old_password_length_invalid" => Some(auth::OLD_PASSWORD_LENGTH_INVALID),
+        "new_password_length_invalid" => Some(auth::NEW_PASSWORD_LENGTH_INVALID),
+        _ => None,
+    }
+}
+
+fn format_validation_errors(errors: &ValidationErrors) -> String {
+    let mut messages = Vec::new();
+    collect_validation_messages("", errors, &mut messages);
+
+    if messages.is_empty() {
+        "Validation failed".to_string()
+    } else {
+        messages.join("; ")
+    }
+}
+
+fn collect_validation_messages(
+    prefix: &str,
+    errors: &ValidationErrors,
+    messages: &mut Vec<String>,
+) {
+    let mut fields = errors.errors().iter().collect::<Vec<_>>();
+    fields.sort_by(|(left, _), (right, _)| left.cmp(right));
+
+    for (field, kind) in fields {
+        let path = if prefix.is_empty() {
+            field.to_string()
+        } else {
+            format!("{prefix}.{field}")
+        };
+
+        match kind {
+            ValidationErrorsKind::Field(field_errors) => {
+                for error in field_errors {
+                    let message = error
+                        .message
+                        .as_ref()
+                        .map(|message| message.to_string())
+                        .unwrap_or_else(|| format!("{} is invalid", error.code));
+                    messages.push(format!("{path}: {message}"));
+                }
+            }
+            ValidationErrorsKind::Struct(nested) => {
+                collect_validation_messages(&path, nested, messages);
+            }
+            ValidationErrorsKind::List(items) => {
+                for (index, nested) in items {
+                    collect_validation_messages(&format!("{path}[{index}]"), nested, messages);
+                }
+            }
+        }
+    }
 }

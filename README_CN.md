@@ -43,10 +43,6 @@ make migrate-up
 cargo run -p auth-server
 ```
 
-Swagger UI: <http://localhost:19878/swagger-ui>
-
----
-
 ## API 接口
 
 ### 会话 (`/auth/session`)
@@ -73,7 +69,7 @@ Swagger UI: <http://localhost:19878/swagger-ui>
 
 ```text
 ┌──────────────────────────────────────────────────────┐
-│                    web-server                        │  HTTP API（Axum + utoipa）
+│                    web-server                        │  HTTP API（Axum）
 ├──────────────────────────────────────────────────────┤
 │                     service                          │  业务逻辑层
 ├──────────────────────────────────────────────────────┤
@@ -128,7 +124,6 @@ url = "postgres://postgres:123456@localhost:15432/auth"
 | 运行时    | Tokio               |
 | ORM       | SeaORM              |
 | Web 框架  | Axum 0.8            |
-| OpenAPI   | utoipa + Swagger UI |
 | JWT       | toolcraft-jwt       |
 | 核心库    | db-core-rs          |
 

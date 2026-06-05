@@ -1,19 +1,18 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize)]
 pub struct JwtVerifyConfigResponse {
     pub public_key_pem: String,
     pub issuer: String,
     pub audience: String,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DisplayUserIdToUuidResponse {
     pub id: String,
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct GetUserByIdentifierQuery {
     pub identifier: String,
 }

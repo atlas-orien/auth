@@ -6,25 +6,10 @@ use std::sync::Arc;
 
 use axum::{Extension, Router};
 use internal::internal_routes;
-use session::{SessionApiDoc, session_routes};
-use toolcraft_axum_kit::{Empty, middleware::cors::create_cors};
+use session::session_routes;
+use toolcraft_axum_kit::middleware::cors::create_cors;
 use toolcraft_jwt::Jwt;
-use user::{UserApiDoc, user_routes};
-use utoipa::{
-    OpenApi,
-    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
-};
-use utoipa_swagger_ui::SwaggerUi;
-
-#[derive(OpenApi)]
-#[openapi(
-    nest(
-        (path = "/auth/session", api = SessionApiDoc),
-        (path = "/auth/user", api = UserApiDoc),
-    ),
-    components(schemas(Empty))
-)]
-struct ApiDoc;
+use user::user_routes;
 
 pub fn create_routes(
     jwt: Arc<Jwt>,
@@ -32,17 +17,6 @@ pub fn create_routes(
     avatar_url_cfg: Arc<crate::settings::AvatarUrlConfig>,
 ) -> Router {
     let cors = create_cors();
-
-    let mut doc = ApiDoc::openapi();
-    doc.components
-        .get_or_insert_with(Default::default)
-        .add_security_scheme(
-            "Bearer",
-            SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::with_description(
-                "Authorization",
-                "Enter: Bearer <token>",
-            ))),
-        );
 
     let auth_routes = Router::new()
         .nest("/session", session_routes())
@@ -55,5 +29,4 @@ pub fn create_routes(
         .layer(Extension(jwt_verify_cfg))
         .layer(Extension(avatar_url_cfg))
         .layer(cors)
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", doc))
 }

@@ -155,7 +155,7 @@ AI 应该能总结出：
 1. dto/<domain>.rs - 请求/响应 DTO
 2. handlers/<domain>.rs - Handler 实现
 3. routes/<domain>.rs - 路由注册
-4. 补充相关的 utoipa OpenAPI 注解和 validator 验证规则。
+4. 补充相关的 validator 验证规则。
 
 禁止修改 db_core。
 禁止在 Handler 中直接使用 repo 的 Service 或引入任何 sea-orm 数据结构。
@@ -227,7 +227,7 @@ AI 应该能总结出：
 2. 提示我运行脚本生成 entity
 3. repo → 建立 prescription 表的 dto 和 service
 4. service → 实现 prescription_biz 的 api 与复合 dto
-5. web-server → handler + route + dto（附带 swagger 定义）
+5. web-server → handler + route + dto
 
 禁止修改 db_core。
 ```
@@ -272,8 +272,6 @@ cargo check
 # 运行服务
 cargo run -p web-server
 
-# 查看 API 文档
-open http://localhost:19878/swagger-ui
 ```
 
 ---
