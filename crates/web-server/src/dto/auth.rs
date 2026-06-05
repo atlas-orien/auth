@@ -31,7 +31,7 @@ pub struct RegisterRequest {
     #[validate(length(
         min = 8,
         max = 128,
-        code = "password_length_invalid",
+        code = "register_password_length_invalid",
         message = "password length must be between 8 and 128"
     ))]
     pub password: String,
@@ -54,7 +54,7 @@ pub struct LoginRequest {
     #[validate(length(
         min = 1,
         max = 128,
-        code = "password_length_invalid",
+        code = "login_password_length_invalid",
         message = "password length must be between 1 and 128"
     ))]
     pub password: String,

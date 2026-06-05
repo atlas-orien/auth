@@ -100,7 +100,7 @@ fn collect_validation_codes(errors: &ValidationErrors, codes: &mut Vec<i16>) {
         match kind {
             ValidationErrorsKind::Field(field_errors) => {
                 for error in field_errors {
-                    if let Some(code) = validation_rule_code(error.code.as_ref()) {
+                    if let Some(code) = auth::validation_rule_code(error.code.as_ref()) {
                         codes.push(code);
                     }
                 }
@@ -114,21 +114,6 @@ fn collect_validation_codes(errors: &ValidationErrors, codes: &mut Vec<i16>) {
                 }
             }
         }
-    }
-}
-
-fn validation_rule_code(rule: &str) -> Option<i16> {
-    match rule {
-        "username_length_invalid" => Some(auth::USERNAME_LENGTH_INVALID),
-        "username_format_invalid" => Some(auth::USERNAME_FORMAT_INVALID),
-        "display_name_length_invalid" => Some(auth::DISPLAY_NAME_LENGTH_INVALID),
-        "avatar_url_invalid" => Some(auth::AVATAR_URL_INVALID),
-        "password_length_invalid" => Some(auth::PASSWORD_LENGTH_INVALID),
-        "email_invalid" => Some(auth::EMAIL_INVALID),
-        "identifier_length_invalid" => Some(auth::IDENTIFIER_LENGTH_INVALID),
-        "old_password_length_invalid" => Some(auth::OLD_PASSWORD_LENGTH_INVALID),
-        "new_password_length_invalid" => Some(auth::NEW_PASSWORD_LENGTH_INVALID),
-        _ => None,
     }
 }
 
