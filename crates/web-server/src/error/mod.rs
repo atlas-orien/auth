@@ -94,7 +94,7 @@ fn validation_error_code(errors: &ValidationErrors) -> Option<i16> {
 
 fn collect_validation_codes(errors: &ValidationErrors, codes: &mut Vec<i16>) {
     let mut fields = errors.errors().iter().collect::<Vec<_>>();
-    fields.sort_by(|(left, _), (right, _)| left.cmp(right));
+    fields.sort_by_key(|(left, _)| *left);
 
     for (_, kind) in fields {
         match kind {
@@ -134,7 +134,7 @@ fn collect_validation_messages(
     messages: &mut Vec<String>,
 ) {
     let mut fields = errors.errors().iter().collect::<Vec<_>>();
-    fields.sort_by(|(left, _), (right, _)| left.cmp(right));
+    fields.sort_by_key(|(left, _)| *left);
 
     for (field, kind) in fields {
         let path = if prefix.is_empty() {
