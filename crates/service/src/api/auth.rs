@@ -36,7 +36,7 @@ impl AuthApi {
         {
             return Err(BizError::new(
                 auth::USERNAME_ALREADY_EXISTS,
-                format!("User with username '{}' already exists", &req.username),
+                format!("User with username '{}' already exists", req.username),
             ));
         }
 
@@ -74,7 +74,7 @@ impl AuthApi {
             .ok_or_else(|| {
                 BizError::new(
                     auth::USER_NOT_FOUND,
-                    format!("User not found: {}", &req.identifier),
+                    format!("User not found: {}", req.identifier),
                 )
             })?;
 
