@@ -1,0 +1,46 @@
+name: auth-service
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: auth
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth -d auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  migrate:
+    image: auth-server:local
+    entrypoint: ["/usr/local/bin/migration"]
+    command: ["up"]
+    environment:
+      DATABASE_URL: postgres://auth:${POSTGRES_PASSWORD}@postgres:5432/auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+    restart: "no"
+
+  auth:
+    image: auth-server:local
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${AUTH_PORT:-29001}:19878"
+    restart: unless-stopped
+
+volumes:
+  auth_postgres_data:

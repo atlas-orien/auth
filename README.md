@@ -225,10 +225,32 @@ cargo test -p auth-server
 
 ## 部署构建
 
-本仓库提供 Linux bundle 构建脚本：
+本仓库提供两种 Linux 构建产物。裸二进制 bundle：
 
 ```bash
 make build-linux-bundle
 ```
 
 生成产物会包含 `auth-server` 二进制和配置模板。
+
+Linux x86_64 Docker 离线部署包：
+
+```bash
+# 提前准备以下两个 linux/amd64 镜像；构建脚本自身不会下载镜像
+docker pull --platform linux/amd64 rust:1.94-alpine3.22
+docker pull --platform linux/amd64 postgres:16-alpine
+make build-docker-release
+```
+
+该命令会构建 `linux/amd64` 的 auth 运行镜像，并生成：
+
+```text
+dist/auth-server-linux-x86_64-docker.tar.gz
+```
+
+构建脚本使用本机 Cargo 缓存并通过 `--offline`、`--network=none` 和
+`--pull=false` 禁止网络访问；缺少前置镜像或 Cargo 缓存时会直接报错。
+产物不包含 Rust 编译环境或 builder 镜像，但包含 auth 服务必需的 PostgreSQL
+运行镜像。目标机只需安装 Docker Engine 和 Docker Compose plugin。解压后
+运行 `./install.sh`，脚本会加载离线镜像、启动数据库、执行迁移并启动服务。
+详细说明见 `deploy/runtime/README.md`。

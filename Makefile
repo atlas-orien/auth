@@ -1,4 +1,4 @@
-.PHONY: help fresh-db postgres init build test examples clean cross-setup-linux cross-build-web-server-linux build-linux-bundle
+.PHONY: help fresh-db postgres init build test examples clean cross-setup-linux cross-build-web-server-linux build-linux-bundle build-docker-release package-docker-offline show-docker-bundle
 
 CROSS_DOCKER_PLATFORM ?= linux/amd64
 CROSS_LINUX_TARGET ?= x86_64-unknown-linux-gnu
@@ -17,6 +17,9 @@ help:
 	@echo "  make cross-setup-linux            - Install non-host Rust toolchain for cross"
 	@echo "  make cross-build-web-server-linux - Cross-build web-server for Linux"
 	@echo "  make build-linux-bundle           - Build Linux binary and package config"
+	@echo "  make build-docker-release         - Build amd64 images and offline deploy tarball"
+	@echo "  make package-docker-offline       - Package existing amd64 Docker images"
+	@echo "  make show-docker-bundle           - Show the offline deploy tarball path"
 	@echo ""
 	@echo "  make migrate-up     - Run migrations"
 	@echo "  make migrate-down   - Rollback migrations"
@@ -54,6 +57,22 @@ cross-build-web-server-linux:
 
 build-linux-bundle:
 	@./scripts/build_linux_bundle.sh
+
+build-docker-release:
+	@./deploy/build-release.sh
+	@echo "Deploy tar: $(abspath dist/auth-server-linux-x86_64-docker.tar.gz)"
+
+package-docker-offline:
+	@./deploy/package-offline.sh
+	@echo "Deploy tar: $(abspath dist/auth-server-linux-x86_64-docker.tar.gz)"
+
+show-docker-bundle:
+	@if [ -f "dist/auth-server-linux-x86_64-docker.tar.gz" ]; then \
+		echo "Deploy tar: $(abspath dist/auth-server-linux-x86_64-docker.tar.gz)"; \
+	else \
+		echo "Deploy tar has not been built yet"; \
+		exit 1; \
+	fi
 
 # Migration commands
 migrate-up:

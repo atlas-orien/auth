@@ -1,0 +1,28 @@
+[http]
+port = 19878
+
+[internal]
+auth_header = "x-internal-token"
+auth_token = "__INTERNAL_AUTH_TOKEN__"
+
+[avatar]
+s3_endpoint = "http://host.docker.internal:9000"
+bucket = "avatars"
+
+[jwt]
+issuer = "auth-server"
+audience = "test"
+key_dir = "config/key"
+access_token_duration = 10800
+refresh_token_duration = 604800
+access_key_validate_exp = true
+refresh_key_validate_exp = true
+
+[[db]]
+name = "default"
+url = "postgres://auth:__POSTGRES_PASSWORD__@postgres:5432/auth"
+max_connections = 10
+min_connections = 1
+connect_timeout = 30
+idle_timeout = 600
+sql_logging = false

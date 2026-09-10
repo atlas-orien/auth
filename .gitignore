@@ -3,6 +3,7 @@
 .env
 /sql
 /dist
+/deploy/vendor
 
 #MacOS
 **/.DS_Store
