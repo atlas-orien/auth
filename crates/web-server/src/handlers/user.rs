@@ -11,7 +11,7 @@ use validator::Validate;
 use crate::{
     dto::auth::{UpdateEmailRequest, UpdatePasswordRequest, UpdateProfileRequest, UserResponse},
     error::{Error, bad_request, from_biz_error},
-    statics::{avatar_provider::get_avatar_provider, db_manager::get_default_ctx},
+    statics::db_manager::get_default_ctx,
 };
 
 pub async fn me(Extension(auth_user): Extension<AuthUser>) -> ResponseResult<UserResponse> {
@@ -131,7 +131,7 @@ fn with_avatar_version(avatar_key: &str) -> crate::error::Result<String> {
     Ok(format!("{key}|v={ts}"))
 }
 
-fn validate_avatar_key(key: &str) -> crate::error::Result<()> {
+pub(crate) fn validate_avatar_key(key: &str) -> crate::error::Result<()> {
     if key.is_empty() || key.chars().count() > 512 {
         return Err(bad_request(
             auth::AVATAR_KEY_LENGTH_INVALID,
@@ -197,31 +197,17 @@ fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<String>)
     Some((avatar.to_string(), None))
 }
 
-fn build_avatar_url(key: &str, version: Option<&str>, public_base_url: &str) -> String {
-    let key = key.trim_start_matches('/');
-    let mut url = format!("{}/{key}", public_base_url.trim_end_matches('/'));
-
-    if let Some(version) = version.filter(|v| !v.is_empty()) {
-        url.push('?');
-        url.push_str(version);
-    }
-
-    url
-}
-
 fn build_avatar_response(avatar: Option<&str>) -> Option<String> {
     let avatar = avatar?.trim();
     if avatar.is_empty() {
         return None;
     }
 
-    if avatar.starts_with("http://") || avatar.starts_with("https://") {
-        return Some(avatar.to_string());
-    }
-
-    let provider = get_avatar_provider()?;
-    parse_avatar_key_and_version(avatar)
-        .map(|(key, version)| build_avatar_url(&key, version.as_deref(), &provider.public_base_url))
+    // Keep avatar references relative; the client resolves them through file-service.
+    parse_avatar_key_and_version(avatar).map(|(key, version)| match version {
+        Some(version) => format!("{key}?{version}"),
+        None => key,
+    })
 }
 
 pub(crate) fn build_user_response(user: ServiceAuthUser) -> UserResponse {

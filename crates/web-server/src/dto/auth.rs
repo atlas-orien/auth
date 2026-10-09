@@ -26,7 +26,6 @@ pub struct RegisterRequest {
         message = "display_name length must be between 1 and 64"
     ))]
     pub display_name: Option<String>,
-    #[validate(url(code = "avatar_url_invalid", message = "avatar must be a valid URL"))]
     pub avatar: Option<String>,
     #[validate(length(
         min = 8,

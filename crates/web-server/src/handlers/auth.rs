@@ -11,6 +11,7 @@ use crate::{
         LoginRequest, LoginResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest,
     },
     error::{Error, from_biz_error},
+    handlers::user::validate_avatar_key,
     statics::db_manager::get_default_ctx,
 };
 
@@ -18,6 +19,9 @@ pub async fn register(Json(req): Json<RegisterRequest>) -> ResponseResult<Empty>
     req.validate()
         .map_err(Error::Validation)
         .map_err(ApiError::from)?;
+    if let Some(avatar_key) = req.avatar.as_deref() {
+        validate_avatar_key(avatar_key).map_err(ApiError::from)?;
+    }
 
     let api = AuthApi::new(get_default_ctx());
     api.register(service::dto::auth::RegisterRequest {

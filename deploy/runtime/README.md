@@ -29,9 +29,9 @@ token 在打包时随机生成，已写入 `deploy.env`。
 ## 配置
 
 所有运行时配置均在 `deploy.env` 中：服务端口、PostgreSQL 用户/密码/数据库名、
-数据目录、内部 API token，以及 JWT 的 issuer/audience。头像公开 URL 由
-file-service 通过 auth 内部接口注册。不要直接修改安装脚本生成的
-`config/services.toml`。
+数据目录、内部 API token，以及 JWT 的 issuer/audience。Auth 只保存用户头像的
+object key 和版本；客户端使用 access token 请求 file-service 获取实际图片地址。
+不要直接修改安装脚本生成的 `config/services.toml`。
 
 修改配置后重新运行安装脚本：
 
