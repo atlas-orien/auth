@@ -254,3 +254,11 @@ dist/auth-server-linux-x86_64-docker.tar.gz
 运行镜像。目标机只需安装 Docker Engine 和 Docker Compose plugin。解压后
 运行 `./install.sh`，脚本会加载离线镜像、启动数据库、执行迁移并启动服务。
 详细说明见 `deploy/runtime/README.md`。
+
+上传已生成的离线包：
+
+```bash
+make upload-docker-bundle
+```
+
+脚本固定上传到 `law@106.52.127.134:~/tmp/`。

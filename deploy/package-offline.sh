@@ -12,6 +12,10 @@ BUNDLE_DIR="$OUTPUT_ROOT/$BUNDLE_NAME"
 ARCHIVE_PATH="$OUTPUT_ROOT/$BUNDLE_NAME.tar.gz"
 IMAGE_TAR="auth-server-images.tar"
 
+random_hex() {
+  od -An -N 24 -tx1 /dev/urandom | tr -d ' \n'
+}
+
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   echo "error: missing Docker image: $IMAGE" >&2
   echo "run deploy/build-release.sh first" >&2
@@ -42,6 +46,19 @@ docker save --platform linux/amd64 \
 
 cp -R "$SCRIPT_DIR/runtime/." "$BUNDLE_DIR/"
 chmod +x "$BUNDLE_DIR/install.sh"
+chmod +x "$BUNDLE_DIR/stop.sh"
+chmod +x "$BUNDLE_DIR/start.sh"
+chmod +x "$BUNDLE_DIR/restart.sh"
+
+echo "==> Generating deployment secrets"
+postgres_password="$(random_hex)"
+internal_auth_token="$(random_hex)"
+sed \
+  -e "s/replace_with_random_password/$postgres_password/" \
+  -e "s/replace_with_random_token/$internal_auth_token/" \
+  "$BUNDLE_DIR/deploy.env" > "$BUNDLE_DIR/deploy.env.tmp"
+mv "$BUNDLE_DIR/deploy.env.tmp" "$BUNDLE_DIR/deploy.env"
+chmod 600 "$BUNDLE_DIR/deploy.env"
 
 echo "==> Generating deployment-specific JWT keys"
 "$PROJECT_DIR/scripts/gen_jwt_keys.sh" "$BUNDLE_DIR/config/key"

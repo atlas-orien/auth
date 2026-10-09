@@ -4,6 +4,7 @@
 /sql
 /dist
 /deploy/vendor
+/deploy/upload.local.env
 
 #MacOS
 **/.DS_Store

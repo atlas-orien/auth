@@ -22,7 +22,6 @@ async fn main() {
     init_tracing_to_file();
     let settings = Settings::load("config/services.toml").unwrap();
     let jwt_verify_cfg = Arc::new(settings.build_jwt_verify_config().unwrap());
-    let avatar_url_cfg = Arc::new(settings.build_avatar_url_config().unwrap());
     let internal_auth_cfg = settings.build_internal_auth_config().unwrap();
     init_internal_auth_config(internal_auth_cfg);
     init_db(settings.db.clone())
@@ -30,7 +29,7 @@ async fn main() {
         .expect("DatabaseManager initialization failed");
 
     let jwt = Arc::new(Jwt::new(settings.jwt));
-    let router = routes::create_routes(jwt, jwt_verify_cfg, avatar_url_cfg);
+    let router = routes::create_routes(jwt, jwt_verify_cfg);
     let http_task = http_server::start(settings.http.port, router);
 
     let _ = tokio::join!(http_task);

@@ -1,7 +1,11 @@
-.PHONY: help fresh-db postgres init build test examples clean cross-setup-linux cross-build-web-server-linux build-linux-bundle build-docker-release package-docker-offline show-docker-bundle
+.DEFAULT_GOAL := all
+
+.PHONY: all help fresh-db postgres init build test examples clean cross-setup-linux cross-build-web-server-linux build-linux-bundle build-docker-release package-docker-offline show-docker-bundle upload-docker-bundle
 
 CROSS_DOCKER_PLATFORM ?= linux/amd64
 CROSS_LINUX_TARGET ?= x86_64-unknown-linux-gnu
+
+all: build-docker-release upload-docker-bundle
 
 # Default target
 help:
@@ -20,6 +24,7 @@ help:
 	@echo "  make build-docker-release         - Build amd64 images and offline deploy tarball"
 	@echo "  make package-docker-offline       - Package existing amd64 Docker images"
 	@echo "  make show-docker-bundle           - Show the offline deploy tarball path"
+	@echo "  make upload-docker-bundle         - Upload the offline tarball to the default server"
 	@echo ""
 	@echo "  make migrate-up     - Run migrations"
 	@echo "  make migrate-down   - Rollback migrations"
@@ -73,6 +78,9 @@ show-docker-bundle:
 		echo "Deploy tar has not been built yet"; \
 		exit 1; \
 	fi
+
+upload-docker-bundle:
+	@./deploy/upload.sh
 
 # Migration commands
 migrate-up:

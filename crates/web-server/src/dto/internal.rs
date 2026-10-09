@@ -16,3 +16,8 @@ pub struct DisplayUserIdToUuidResponse {
 pub struct GetUserByIdentifierQuery {
     pub identifier: String,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RegisterAvatarProviderRequest {
+    pub public_base_url: String,
+}

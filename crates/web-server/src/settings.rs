@@ -13,7 +13,6 @@ pub struct Settings {
     pub http: HttpCfg,
     pub jwt: JwtCfg,
     pub db: Vec<DatabaseConfig>,
-    pub avatar: AvatarCfg,
     #[serde(default)]
     pub internal: InternalCfg,
 }
@@ -31,12 +30,6 @@ pub struct InternalCfg {
     pub auth_token: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct AvatarCfg {
-    pub s3_endpoint: String,
-    pub bucket: String,
-}
-
 #[derive(Debug, Clone)]
 pub struct JwtVerifyConfig {
     pub public_key_pem: String,
@@ -48,12 +41,6 @@ pub struct JwtVerifyConfig {
 pub struct InternalAuthConfig {
     pub header_name: HeaderName,
     pub token: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct AvatarUrlConfig {
-    pub s3_endpoint: String,
-    pub bucket: String,
 }
 
 fn default_internal_auth_header() -> String {
@@ -109,33 +96,6 @@ impl Settings {
         Ok(InternalAuthConfig {
             header_name,
             token: self.internal.auth_token.clone(),
-        })
-    }
-
-    pub fn build_avatar_url_config(&self) -> Result<AvatarUrlConfig> {
-        let s3_endpoint = self
-            .avatar
-            .s3_endpoint
-            .trim()
-            .trim_end_matches('/')
-            .to_string();
-        let bucket = self.avatar.bucket.trim().trim_matches('/').to_string();
-
-        if s3_endpoint.is_empty() {
-            return Err(crate::error::Error::Custom(
-                "missing avatar.s3_endpoint in config/services.toml".to_string(),
-            ));
-        }
-
-        if bucket.is_empty() {
-            return Err(crate::error::Error::Custom(
-                "missing avatar.bucket in config/services.toml".to_string(),
-            ));
-        }
-
-        Ok(AvatarUrlConfig {
-            s3_endpoint,
-            bucket,
         })
     }
 }

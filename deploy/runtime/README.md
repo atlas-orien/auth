@@ -1,52 +1,53 @@
-# Auth Service Linux x86_64 Offline Bundle
+# Auth 服务 Linux x86_64 离线部署包
 
-This bundle contains the `auth-server` and PostgreSQL runtime images for Linux
-x86_64. It does not contain a Rust toolchain, source code, or the builder
-image. The target machine does not need Rust or network access.
+该部署包包含 `auth-server` 和 PostgreSQL 的 Linux x86_64 运行镜像，不包含
+Rust 编译环境、源代码或构建镜像。目标服务器不需要安装 Rust，也不需要访问网络。
 
-## Requirements
+## 环境要求
 
 - Linux x86_64
 - Docker Engine
-- Docker Compose plugin (`docker compose`)
+- Docker Compose plugin（`docker compose`）
 
-## Install
+## 安装
 
 ```bash
 tar -xzf auth-server-linux-x86_64-docker.tar.gz
 cd auth-server-linux-x86_64-docker
+# 安装前只需按需修改这一份配置文件。
+vi deploy.env
 ./install.sh
 ```
 
-The installer loads the auth and PostgreSQL images, creates random PostgreSQL
-and internal API secrets, applies database migrations, uses the
-deployment-specific JWT keys included by the packager, and starts the service.
-Existing configuration, keys, logs, and database data are preserved when it is
-run again.
+安装脚本会加载 auth 和 PostgreSQL 镜像、执行数据库迁移，并启动服务。重复执行
+安装脚本会保留已有配置、JWT 密钥、日志和数据库数据。PostgreSQL 密码和内部 API
+token 在打包时随机生成，已写入 `deploy.env`。
 
-The default address is `http://SERVER_IP:29001`. Change the host port in
-`.env` before rerunning `./install.sh` if needed.
+默认访问地址为 `http://服务器IP:39999`。需要调整端口时，修改 `deploy.env` 后
+重新执行 `./install.sh`。
 
-## Configuration
+## 配置
 
-Update the avatar object-storage endpoint, bucket, JWT issuer, and JWT audience
-in `config/services.toml` for the deployment environment. If the PostgreSQL
-password is changed later, update both `.env` and the database URL in
-`config/services.toml`.
+所有运行时配置均在 `deploy.env` 中：服务端口、PostgreSQL 用户/密码/数据库名、
+数据目录、内部 API token，以及 JWT 的 issuer/audience。头像公开 URL 由
+file-service 通过 auth 内部接口注册。不要直接修改安装脚本生成的
+`config/services.toml`。
 
-After changing configuration, restart the service:
+修改配置后重新运行安装脚本：
 
 ```bash
-docker compose up -d auth
+./restart.sh
 ```
 
-Useful commands:
+常用命令：
 
 ```bash
-docker compose ps
-docker compose logs -f auth
-docker compose down
+docker compose --env-file deploy.env ps
+docker compose --env-file deploy.env logs -f auth
+./start.sh
+./restart.sh
+./stop.sh
 ```
 
-`docker compose down` preserves the PostgreSQL named volume. Deleting that
-volume deletes the auth database and is intentionally not part of the installer.
+`./stop.sh` 会保留 PostgreSQL 数据目录；删除 `deploy.env` 中
+`POSTGRES_DATA_DIR` 指向的目录才会删除 auth 数据库。

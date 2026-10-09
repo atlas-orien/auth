@@ -5,10 +5,6 @@ port = 19878
 auth_header = "x-internal-token"
 auth_token = "replace-with-strong-internal-token"
 
-[avatar]
-s3_endpoint = "http://localhost:9000"
-bucket = "avatars"
-
 [jwt]
 issuer = "auth-server"
 audience = "test"

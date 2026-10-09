@@ -11,23 +11,17 @@ use validator::Validate;
 use crate::{
     dto::auth::{UpdateEmailRequest, UpdatePasswordRequest, UpdateProfileRequest, UserResponse},
     error::{Error, bad_request, from_biz_error},
-    settings::AvatarUrlConfig,
-    statics::db_manager::get_default_ctx,
+    statics::{avatar_provider::get_avatar_provider, db_manager::get_default_ctx},
 };
 
-pub async fn me(
-    Extension(auth_user): Extension<AuthUser>,
-    Extension(avatar_cfg): Extension<std::sync::Arc<AvatarUrlConfig>>,
-) -> ResponseResult<UserResponse> {
+pub async fn me(Extension(auth_user): Extension<AuthUser>) -> ResponseResult<UserResponse> {
     let api = AuthApi::new(get_default_ctx());
     let user = api
         .get_user(&auth_user.user_id)
         .await
         .map_err(from_biz_error)?;
 
-    Ok(build_user_response(user, &avatar_cfg)
-        .into_common_response()
-        .to_json())
+    Ok(build_user_response(user).into_common_response().to_json())
 }
 
 pub async fn update_password(
@@ -70,10 +64,9 @@ pub async fn update_email(
 
 pub async fn update_profile(
     Extension(auth_user): Extension<AuthUser>,
-    Extension(avatar_cfg): Extension<std::sync::Arc<AvatarUrlConfig>>,
     Json(req): Json<UpdateProfileRequest>,
 ) -> ResponseResult<Empty> {
-    let req = normalize_profile_patch(req, &avatar_cfg).map_err(ApiError::from)?;
+    let req = normalize_profile_patch(req).map_err(ApiError::from)?;
 
     let api = AuthApi::new(get_default_ctx());
     api.update_profile(
@@ -91,9 +84,8 @@ pub async fn update_profile(
 
 fn normalize_profile_patch(
     req: UpdateProfileRequest,
-    cfg: &AvatarUrlConfig,
 ) -> crate::error::Result<UpdateProfileRequest> {
-    validate_profile_patch(&req, cfg)?;
+    validate_profile_patch(&req)?;
 
     let avatar = match req.avatar {
         None => None,
@@ -107,10 +99,7 @@ fn normalize_profile_patch(
     })
 }
 
-fn validate_profile_patch(
-    req: &UpdateProfileRequest,
-    cfg: &AvatarUrlConfig,
-) -> crate::error::Result<()> {
+fn validate_profile_patch(req: &UpdateProfileRequest) -> crate::error::Result<()> {
     if let Some(Some(display_name)) = &req.display_name
         && (display_name.is_empty() || display_name.chars().count() > 64)
     {
@@ -122,7 +111,7 @@ fn validate_profile_patch(
 
     if let Some(Some(avatar)) = &req.avatar {
         let key = avatar.trim();
-        validate_avatar_key(key, cfg)?;
+        validate_avatar_key(key)?;
     }
 
     Ok(())
@@ -142,7 +131,7 @@ fn with_avatar_version(avatar_key: &str) -> crate::error::Result<String> {
     Ok(format!("{key}|v={ts}"))
 }
 
-fn validate_avatar_key(key: &str, cfg: &AvatarUrlConfig) -> crate::error::Result<()> {
+fn validate_avatar_key(key: &str) -> crate::error::Result<()> {
     if key.is_empty() || key.chars().count() > 512 {
         return Err(bad_request(
             auth::AVATAR_KEY_LENGTH_INVALID,
@@ -178,14 +167,6 @@ fn validate_avatar_key(key: &str, cfg: &AvatarUrlConfig) -> crate::error::Result
         ));
     }
 
-    let endpoint = cfg.s3_endpoint.trim_end_matches('/');
-    if key.starts_with(endpoint) {
-        return Err(bad_request(
-            auth::AVATAR_KEY_URL_NOT_ALLOWED,
-            "avatar must be object key only (endpoint prefix is not allowed)".to_string(),
-        ));
-    }
-
     Ok(())
 }
 
@@ -216,9 +197,9 @@ fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<String>)
     Some((avatar.to_string(), None))
 }
 
-fn build_avatar_url(key: &str, version: Option<&str>, cfg: &AvatarUrlConfig) -> String {
+fn build_avatar_url(key: &str, version: Option<&str>, public_base_url: &str) -> String {
     let key = key.trim_start_matches('/');
-    let mut url = format!("{}/{}/{}", cfg.s3_endpoint, cfg.bucket, key);
+    let mut url = format!("{}/{key}", public_base_url.trim_end_matches('/'));
 
     if let Some(version) = version.filter(|v| !v.is_empty()) {
         url.push('?');
@@ -228,7 +209,7 @@ fn build_avatar_url(key: &str, version: Option<&str>, cfg: &AvatarUrlConfig) -> 
     url
 }
 
-fn build_avatar_response(avatar: Option<&str>, cfg: &AvatarUrlConfig) -> Option<String> {
+fn build_avatar_response(avatar: Option<&str>) -> Option<String> {
     let avatar = avatar?.trim();
     if avatar.is_empty() {
         return None;
@@ -238,15 +219,13 @@ fn build_avatar_response(avatar: Option<&str>, cfg: &AvatarUrlConfig) -> Option<
         return Some(avatar.to_string());
     }
 
+    let provider = get_avatar_provider()?;
     parse_avatar_key_and_version(avatar)
-        .map(|(key, version)| build_avatar_url(&key, version.as_deref(), cfg))
+        .map(|(key, version)| build_avatar_url(&key, version.as_deref(), &provider.public_base_url))
 }
 
-pub(crate) fn build_user_response(
-    user: ServiceAuthUser,
-    avatar_cfg: &AvatarUrlConfig,
-) -> UserResponse {
-    let avatar = build_avatar_response(user.avatar.as_deref(), avatar_cfg);
+pub(crate) fn build_user_response(user: ServiceAuthUser) -> UserResponse {
+    let avatar = build_avatar_response(user.avatar.as_deref());
 
     UserResponse {
         id: user.id,
