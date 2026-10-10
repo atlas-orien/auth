@@ -6,11 +6,12 @@ mod routes;
 mod settings;
 mod statics;
 
-use std::sync::Arc;
+use std::{process::ExitCode, sync::Arc};
 
 use settings::Settings;
 use toolcraft_axum_kit::http_server;
 use toolcraft_jwt::Jwt;
+use tracing::error;
 
 use crate::{
     logging::init_tracing_to_file,
@@ -18,7 +19,7 @@ use crate::{
 };
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     init_tracing_to_file();
     let settings = Settings::load("config/services.toml").unwrap();
     let jwt_verify_cfg = Arc::new(settings.build_jwt_verify_config().unwrap());
@@ -30,7 +31,14 @@ async fn main() {
 
     let jwt = Arc::new(Jwt::new(settings.jwt));
     let router = routes::create_routes(jwt, jwt_verify_cfg);
-    let http_task = http_server::start(settings.http.port, router);
+    let port = settings.http.port;
 
-    let _ = tokio::join!(http_task);
+    match http_server::start(port, router).await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            error!(port, error = %err, "HTTP server failed");
+            eprintln!("HTTP server failed on 0.0.0.0:{port}: {err}");
+            ExitCode::FAILURE
+        }
+    }
 }
