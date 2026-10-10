@@ -9,7 +9,10 @@ use toolcraft_axum_kit::{
 use validator::Validate;
 
 use crate::{
-    dto::auth::{UpdateEmailRequest, UpdatePasswordRequest, UpdateProfileRequest, UserResponse},
+    dto::auth::{
+        AvatarReference, UpdateEmailRequest, UpdatePasswordRequest, UpdateProfileRequest,
+        UserResponse,
+    },
     error::{Error, bad_request, from_biz_error},
     statics::db_manager::get_default_ctx,
 };
@@ -170,9 +173,12 @@ pub(crate) fn validate_avatar_key(key: &str) -> crate::error::Result<()> {
     Ok(())
 }
 
-fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<String>)> {
+fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<u64>)> {
     let avatar = avatar.trim();
     if avatar.is_empty() {
+        return None;
+    }
+    if avatar.starts_with("http://") || avatar.starts_with("https://") {
         return None;
     }
 
@@ -182,7 +188,7 @@ fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<String>)
         if key.is_empty() {
             return None;
         }
-        return Some((key.to_string(), Some(query.to_string())));
+        return Some((key.to_string(), query.strip_prefix("v=")?.parse().ok()));
     }
 
     // current storage format: key|v=timestamp
@@ -190,23 +196,22 @@ fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<String>)
         let key = key.trim();
         let version_value = version_value.trim();
         if !key.is_empty() && !version_value.is_empty() {
-            return Some((key.to_string(), Some(format!("v={version_value}"))));
+            return Some((key.to_string(), version_value.parse().ok()));
         }
     }
 
     Some((avatar.to_string(), None))
 }
 
-fn build_avatar_response(avatar: Option<&str>) -> Option<String> {
+fn build_avatar_response(avatar: Option<&str>) -> Option<AvatarReference> {
     let avatar = avatar?.trim();
     if avatar.is_empty() {
         return None;
     }
 
-    // Keep avatar references relative; the client resolves them through file-service.
-    parse_avatar_key_and_version(avatar).map(|(key, version)| match version {
-        Some(version) => format!("{key}?{version}"),
-        None => key,
+    parse_avatar_key_and_version(avatar).map(|(object_key, version)| AvatarReference {
+        object_key,
+        version,
     })
 }
 

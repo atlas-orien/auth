@@ -160,12 +160,18 @@ pub struct RefreshTokenResponse {
 }
 
 #[derive(Debug, Serialize)]
+pub struct AvatarReference {
+    pub object_key: String,
+    pub version: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct UserResponse {
     pub id: String,
     pub display_user_id: Option<String>,
     pub username: String,
     pub display_name: Option<String>,
-    pub avatar: Option<String>,
+    pub avatar: Option<AvatarReference>,
     pub email: Option<String>,
     pub email_verified: bool,
     pub disabled: bool,
