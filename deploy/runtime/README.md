@@ -55,7 +55,6 @@ docker compose --env-file deploy.env logs -f auth
 ./reset-database.sh
 ```
 
-脚本会要求输入 `POSTGRES_DB` 中的数据库名确认，然后删除并重建该数据库、重新运行迁移，
-最后启动 Auth。此操作不可恢复，会删除该 Auth 数据库内的所有用户和其他数据；不会删除
-PostgreSQL 数据目录或同一 PostgreSQL 实例中的其他数据库。运行前确认 `deploy.env` 指向
-预期的 PostgreSQL 实例和数据库。
+脚本会直接删除并重建 `POSTGRES_DB`，重新运行迁移，最后启动 Auth。此操作不可恢复，
+会删除该 Auth 数据库内的所有用户和其他数据；不会删除 PostgreSQL 数据目录或同一
+PostgreSQL 实例中的其他数据库。运行前确认 `deploy.env` 指向预期的 PostgreSQL 实例和数据库。

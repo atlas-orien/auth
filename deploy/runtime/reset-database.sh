@@ -34,16 +34,6 @@ if ! docker compose --env-file "$CONFIG_FILE" ps --status running --services | g
   fail "PostgreSQL container is not running; start and verify the intended database first"
 fi
 
-if [ ! -t 0 ]; then
-  fail "run this script from an interactive terminal to confirm database deletion"
-fi
-
-echo "This will permanently delete all data in PostgreSQL database '$POSTGRES_DB'."
-echo "The PostgreSQL data directory and other databases will be left untouched."
-printf "Type the database name to continue: "
-IFS= read -r confirmation
-[ "$confirmation" = "$POSTGRES_DB" ] || fail "database name did not match; nothing was changed"
-
 echo "==> Stopping Auth"
 docker compose --env-file "$CONFIG_FILE" stop auth
 
