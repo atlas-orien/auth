@@ -49,6 +49,7 @@ chmod +x "$BUNDLE_DIR/install.sh"
 chmod +x "$BUNDLE_DIR/stop.sh"
 chmod +x "$BUNDLE_DIR/start.sh"
 chmod +x "$BUNDLE_DIR/restart.sh"
+chmod +x "$BUNDLE_DIR/reset-database.sh"
 
 echo "==> Generating deployment secrets"
 postgres_password="$(random_hex)"

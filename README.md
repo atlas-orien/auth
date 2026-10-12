@@ -61,13 +61,12 @@ Auth 使用私钥签发 token；file-service 通过 `/internal/jwt_verify_config
 
 ## 头像与 File Service
 
-头像注册和资料更新只接收 object key，不接收 S3 URL。Auth 在数据库中保存 key 和版本；用户资料响应将它们分开返回：
+头像注册和资料更新只接收 object key，不接收 S3 URL。Auth 在数据库中只保存 object key；用户资料响应返回：
 
 ```json
 {
   "avatar": {
-    "object_key": "avatars/{user_scope}",
-    "version": 1791540795
+    "object_key": "avatars/{user_scope}"
   }
 }
 ```

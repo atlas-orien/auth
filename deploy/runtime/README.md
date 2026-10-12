@@ -49,5 +49,13 @@ docker compose --env-file deploy.env logs -f auth
 ./stop.sh
 ```
 
-`./stop.sh` 会保留 PostgreSQL 数据目录；删除 `deploy.env` 中
-`POSTGRES_DATA_DIR` 指向的目录才会删除 auth 数据库。
+`./stop.sh` 会保留 PostgreSQL 数据目录。需要清空 Auth 数据库并重新建表时，运行：
+
+```bash
+./reset-database.sh
+```
+
+脚本会要求输入 `POSTGRES_DB` 中的数据库名确认，然后删除并重建该数据库、重新运行迁移，
+最后启动 Auth。此操作不可恢复，会删除该 Auth 数据库内的所有用户和其他数据；不会删除
+PostgreSQL 数据目录或同一 PostgreSQL 实例中的其他数据库。运行前确认 `deploy.env` 指向
+预期的 PostgreSQL 实例和数据库。

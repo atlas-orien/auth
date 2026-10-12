@@ -162,7 +162,6 @@ pub struct RefreshTokenResponse {
 #[derive(Debug, Serialize)]
 pub struct AvatarReference {
     pub object_key: String,
-    pub version: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]

@@ -1,5 +1,3 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use axum::{Extension, Json};
 use error_code::auth;
 use service::{api::auth::AuthApi, dto::auth::AuthUser as ServiceAuthUser};
@@ -93,7 +91,7 @@ fn normalize_profile_patch(
     let avatar = match req.avatar {
         None => None,
         Some(None) => Some(None),
-        Some(Some(avatar_key)) => Some(Some(with_avatar_version(&avatar_key)?)),
+        Some(Some(avatar_key)) => Some(Some(avatar_key.trim().to_string())),
     };
 
     Ok(UpdateProfileRequest {
@@ -118,20 +116,6 @@ fn validate_profile_patch(req: &UpdateProfileRequest) -> crate::error::Result<()
     }
 
     Ok(())
-}
-
-fn with_avatar_version(avatar_key: &str) -> crate::error::Result<String> {
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|e| Error::Custom(format!("failed to compute avatar version timestamp: {e}")))?
-        .as_secs();
-    let raw_key = avatar_key.trim();
-    let raw_key = raw_key
-        .rsplit_once("|v=")
-        .map(|(key, _)| key)
-        .unwrap_or(raw_key);
-    let key = raw_key.split('?').next().unwrap_or_default().trim();
-    Ok(format!("{key}|v={ts}"))
 }
 
 pub(crate) fn validate_avatar_key(key: &str) -> crate::error::Result<()> {
@@ -173,7 +157,7 @@ pub(crate) fn validate_avatar_key(key: &str) -> crate::error::Result<()> {
     Ok(())
 }
 
-fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<u64>)> {
+fn parse_avatar_object_key(avatar: &str) -> Option<String> {
     let avatar = avatar.trim();
     if avatar.is_empty() {
         return None;
@@ -182,25 +166,25 @@ fn parse_avatar_key_and_version(avatar: &str) -> Option<(String, Option<u64>)> {
         return None;
     }
 
-    // legacy format: key?v=timestamp
+    // Accept legacy versioned database values, but expose only the object key.
     if let Some((key, query)) = avatar.split_once('?') {
         let key = key.trim();
-        if key.is_empty() {
+        if key.is_empty() || query.strip_prefix("v=")?.parse::<u64>().is_err() {
             return None;
         }
-        return Some((key.to_string(), query.strip_prefix("v=")?.parse().ok()));
+        return Some(key.to_string());
     }
 
-    // current storage format: key|v=timestamp
     if let Some((key, version_value)) = avatar.rsplit_once("|v=") {
         let key = key.trim();
         let version_value = version_value.trim();
-        if !key.is_empty() && !version_value.is_empty() {
-            return Some((key.to_string(), version_value.parse().ok()));
+        if !key.is_empty() && version_value.parse::<u64>().is_ok() {
+            return Some(key.to_string());
         }
+        return None;
     }
 
-    Some((avatar.to_string(), None))
+    Some(avatar.to_string())
 }
 
 fn build_avatar_response(avatar: Option<&str>) -> Option<AvatarReference> {
@@ -209,10 +193,7 @@ fn build_avatar_response(avatar: Option<&str>) -> Option<AvatarReference> {
         return None;
     }
 
-    parse_avatar_key_and_version(avatar).map(|(object_key, version)| AvatarReference {
-        object_key,
-        version,
-    })
+    parse_avatar_object_key(avatar).map(|object_key| AvatarReference { object_key })
 }
 
 pub(crate) fn build_user_response(user: ServiceAuthUser) -> UserResponse {
